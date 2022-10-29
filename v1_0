@@ -1,0 +1,55 @@
+#include <bits/stdc++.h>
+#include <pthread.h>
+using namespace std;
+
+
+
+
+
+int main(int argc, char **argv)
+{
+	int map_threads = atoi(argv[1]);
+	int reduce_threads = atoi(argv[2]);
+	int cores = map_threads + reduce_threads;
+	int ids[cores];
+	int N, i;
+	char s[20];
+
+	pthread_t threads[cores];
+
+	ifstream fin(argv[3]);
+	fin >> N;
+	fin >> s;
+
+	cout << N << " " << s << endl;
+	ifstream fin2(s);
+
+	fin2 >> N;
+	cout << "In " << s << ": " << N << endl;
+	fin2.close();
+
+	fin.close();
+
+
+	for (i = 0; i < cores; i++) {
+		ids[i] = i;
+		// r = pthread_create(&threads[i], NULL, f, &arguments[i]);
+
+		// if (r) {
+		// 	printf("Eroare la crearea thread-ului %d\n", i);
+		// 	exit(-1);
+		// }
+	}
+
+	for (i = 0; i < cores; i++) {
+		// r = pthread_join(threads[i], &status);
+
+		// if (r) {
+		// 	printf("Eroare la asteptarea thread-ului %d\n", i);
+		// 	exit(-1);
+		// }
+	}
+	
+	/* code */
+	return 0;
+}
