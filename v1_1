@@ -1,0 +1,97 @@
+//#include <bits/stdc++.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+struct th {
+    int id;
+	int map_threads;
+	int reduce_threads;
+	//int l[20][20];
+};
+
+
+void *f(void *arg) {
+
+    struct th *t = (struct th*) arg;
+
+    printf("id = %d, map_threads = %d, reduce_threads = %d\n", t->id, t->map_threads, t->reduce_threads);
+    
+}
+
+int main(int argc, char **argv)
+{
+	int map_threads = atoi(argv[1]);
+	int reduce_threads = atoi(argv[2]);
+	int cores = map_threads + reduce_threads;
+	int ids[cores];
+	int N, i, r;
+	char s[20];
+
+	FILE *fp, *fp2;
+	pthread_t threads[cores];
+	printf("map_threads = %d, reduce_threads = %d\n", map_threads, reduce_threads);
+
+	fp = fopen(argv[3], "r");
+
+	if(fp == NULL)
+	{
+		printf("Error!");   
+		exit(1);             
+	}
+
+	fscanf(fp, "%d", &N);
+	printf("N = %d\n", N);
+	for (int i = 0; i < N; i++) {
+		fscanf(fp, "%s", s);
+		printf("s = %s\n", s);
+
+		// fp2 = fopen(s, "r"); // citeste fiser doar pt un s
+		// if(fp2 == NULL)
+		// {
+		// 	printf("Error!");   
+		// 	exit(1);             
+		// }
+		// fscanf(fp2, "%d", &i);
+		// printf("i = %d\n", i);
+
+
+		// fclose(fp2);
+		puts("da");
+		
+	}
+	fclose(fp);
+	
+
+
+	struct th *t = malloc(sizeof(struct th)*map_threads);
+
+	int id;
+	for (id = 0; id < map_threads; id++) {
+		//ids[i] = i;
+		t[id].id = id;
+		t[id].map_threads = map_threads;
+		t[id].reduce_threads = reduce_threads;
+		//printf("id = %d, map_threads = %d, reduce_threads = %d\n", t[id].id, t[id].map_threads, t[id].reduce_threads);
+
+		r = pthread_create(&threads[id], NULL, f, &t[id]);
+
+		if (r) {
+			printf("Eroare la crearea thread-ului %d\n", id);
+			exit(-1);
+		}
+	}
+
+	for (i = 0; i < map_threads; i++) { // folosesc doar mpa_threads inca, dar la final o sa le folosesc pe ambele adica si reduce si o sa ma cores
+		r = pthread_join(threads[i], NULL);
+
+		if (r) {
+			printf("Eroare la asteptarea thread-ului %d\n", i);
+			exit(-1);
+		}
+	}
+	
+	/* code */
+	return 0;
+}
