@@ -47,20 +47,20 @@ int main(int argc, char **argv)
 		fscanf(fp, "%s", s);
 		printf("s = %s\n", s);
 
-		// fp2 = fopen(s, "r"); // citeste fiser doar pt un s
-		// if(fp2 == NULL)
-		// {
-		// 	printf("Error!");   
-		// 	exit(1);             
-		// }
-		// fscanf(fp2, "%d", &i);
-		// printf("i = %d\n", i);
+		fp2 = fopen(s, "r"); 
+		if(fp2 == NULL)
+		{
+			printf("Error!");   
+			exit(1);             
+		}
+		fscanf(fp2, "%d", &r);
+		printf("r = %d\n", r);
 
 
-		// fclose(fp2);
-		puts("da");
-		
+		fclose(fp2);
 	}
+	puts("");
+
 	fclose(fp);
 	
 
