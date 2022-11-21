@@ -1,12 +1,30 @@
 Oprea Mihail 334CC
 Tema1 apd
-	Mai intai in main mi-am luat in var int map_threads, reduce_threads nr. de thread-uri de tip map respectiv reduce din argumentele primite in linia de comanda.
+	Mie imi da bine pt. toate testele, doar ca am timpi mari la testele de scalabilitate(de peste 3 minute sau mai mult in functie de nr. de
+thread-uri map) deoarece nu am gasit o metoda eficenta de a gasi pt. un nr. ce numere ridicate la o anumita putere dau acel nr., lucru ce o sa duca
+la scaderea integrala a punctajului pe scalabilitate pt. o chestie care nu tine de paradigma map-reduce sau de thread-uri. De exemplu mie imi ia
+cam 3 min si 10 sec pe cand rulez ./tema1 4 4 test.txt pt testul1, de pe o masina virtuala.
+	Mai intai in main mi-am luat in var int map_threads, reduce_threads nr. de thread-uri de tip map respectiv reduce din argumentele primite in
+linia de comanda, iar in var int cores mi-am calculat nr. total de thread-uri dat de suma celor 2 tipuri de thread-uri.
 	Am deschis fisierul primit la argv[3] in FILE *fp si am salvat in var int N nr de fisiere de prelucrat.
-	Mi-am creat si alocat un array de structuri th pt fiecare thread de tip map, in care imi stochez id-ul thread-ului, nr. de thread-uri map si reduce, N-ul, numele fiserului pe care trebuie sa-l prelucreze un thread de tip map, o var numita int putere, o var int ready cu 0 si un vector de
+	Mi-am creat si alocat un array de structuri th pt fiecare thread de tip map, in care imi stochez id-ul thread-ului, nr. de thread-uri map si
+reduce, N-ul, numele fiserului pe care trebuie sa-l prelucreze un thread de tip map, o var numita int putere, o var int ready cu 0 si un vector de
 vectori pe post de lista pt fiecare lista corespunzatoare unei puteri.
-	Dupa trimit in executie thread-urile de tip map cu functia f_map. La inceput fiecarui thread fiindu-i alocat un fisier. Dupa ce primeste fiecare un fisier inseamna ca mai sunt inca N-map_thread fisiere de prelucrat, care se aloca primului thread care termina si tot asa in for-ul de la linia xxx. Aici parcurg fiecare structura si vad pt. care am var. stocat int ready = 1 care imi spune ca thread-ul map cu id-ul din strucura a terminat de prelucrat ce avea inainte si e disponibil sa primeasaca un nou fisier de prelucrat, dupa care ready devine din nou 0. Ready devine 1 la finalul fct-iei f_map. 
-	In functia void *f_map(void *arg) primesc structura corespunzatoare cu id-ului thread-ului, dupa care citesc fisierul stocat in ea si incep sa parcurg valorile din fisier si sa vad care respecta conditia de a fi un nr. la o putere 2 pana la nr. de threaduri reduce + 1 si o stochez in lista care retine numerele la o putere anumita.
-	Tot aici am o variabila globala int pass = 0 blocata cu un mutex mutex2 pe care o cresc de fiecare data cand termina un thread de tip map, iar cand pass ajunge la valoarea N inseamna ca toate valorile din cele N fisiere au fost stocate si dau drumul la semaforul semaphore2 care intial e pe 0.
-	Punerea in executie a thread-urilor de tip reduce se face cu functia f_reduce in care dau ca argument functiei pt. fiecare thread, to array-ul de structuri pt. ca un thread de tip reduce sa aiba acces la lista specifiaca pt. o anumita putere de la fiecare thread de tip map.
-	Aici sem_wait(&semaphore2) va fi 1(eliberat) abia cand pass = N (var descrisa mai sus). Dupa semaforul va ajunge la val 0 si de aceea fac imediat dupa sem_post(&semaphore2) ca celelate thread-uri de tip map sa poata rula relativ in paralel. La final imi strang toate valorile pt. fiecare lista din fiecare structura intr-un set declarat set<int> list_reduce ca apoi sa nr. valorile din set si sa afisez valoare in fisierul corespunzator de iesire. Rolul var. int putere dintr-o structura e folosit doar pt. id-ul 0 unde putere = 1 la inceput, iar de fiecare data isi incepe executia un thread de tip reduce prun apelul fct. void *f_reduce(void *arg) va creste la inceput de functie intre sem_wait si sem_post cu 1 prin t[0].putere++, astfel primul thread care ajunge va lucra cu listele de putere 2, urmatorul cu cele de putere 3 si tot asa.
-	La final de tot in main fac join pt thread-uri si distrug mutex-urile si semafoarele folosite.
+	Dupa trimit in executie thread-urile de tip map cu functia f_map. La inceput fiecarui thread fiindu-i alocat un fisier. Dupa ce primeste
+fiecare un fisier inseamna ca mai sunt inca N-map_thread fisiere de prelucrat, care se aloca primului thread care termina si tot asa in for-ul de la 
+linia 181. Aici parcurg fiecare structura si vad pt. care am var. stocat int ready == 1 care imi spune ca thread-ul map cu id-ul din strucura a
+terminat de prelucrat ce avea inainte si e disponibil sa primeasaca un nou fisier de prelucrat, dupa care ready devine din nou 0. Ready devine 1 la
+finalul fct-iei f_map. Folosesc un while(1) in asteptarea unui thread sa se elibereze.
+	In functia void *f_map(void *arg) primesc structura corespunzatoare cu id-ului thread-ului, dupa care citesc fisierul stocat in ea si incep
+sa parcurg valorile din fisier si sa vad care respecta conditia de a fi un nr. la o putere 2 pana la nr. de threaduri reduce + 1 si o stochez in
+lista care retine numerele la o putere anumita.
+	Punerea in executie a thread-urilor de tip reduce se face cu functia f_reduce in care dau ca argument functiei pt. fiecare thread, to array-
+ul de structuri pt. ca un thread de tip reduce sa aiba acces la lista specifiaca pt. o anumita putere de la fiecare thread de tip map.
+	In functia void *f_reduce(void *arg) astept mai intai ca toate thread-urlie de tip map sa termine executita, iar asta se va intampla intr-un
+while(1) unde verific daca au toate var ready din structura lor setata pe 1.	
+	Dupa imi strang toate valorile pt. fiecare lista din fiecare structura intr-un set declarat set<int> list_reduce ca apoi sa nr. valorile din
+set si sa afisez valoare in fisierul corespunzator de iesire. Rolul var. int putere dintr-o structura e folosit doar pt. id-ul 0 unde putere = 1 la
+inceput, iar de fiecare data isi incepe executia un thread de tip reduce prun apelul fct. void *f_reduce(void *arg) va creste la inceput de functie
+intre pthread_mutex_lock(&mutex1) si pthread_mutex_unlock(&mutex1) cu 1 prin t[0].putere++, astfel primul thread care ajunge va lucra cu listele de
+putere 2, urmatorul cu cele de putere 3 si tot asa.
+	La final de tot in main fac join pt. toate  thread-urile si distrug mutex-ul mutex1.
