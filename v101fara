@@ -1,0 +1,456 @@
+#include <bits/stdc++.h>
+#include <iostream>
+#include <pthread.h>
+#include <semaphore.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <unistd.h>
+using namespace std;
+
+// #include <fstream>
+// #include <iomanip>
+// #include <vector>
+// #include <algorithm>
+// #include <iostream>
+// using namespace std;
+
+sem_t semaphore;
+sem_t semaphore2;
+sem_t semaphore3;
+
+pthread_mutex_t mutex1;
+pthread_mutex_t mutex2;
+pthread_mutex_t mutex3;
+
+
+pthread_barrier_t barrier;
+
+int id_th = -1;
+int pass = 0;
+int ok = 0;
+
+struct th {
+    int id;
+	int map_threads;
+	int reduce_threads;
+	int N;
+	vector<vector<long long int>> l;
+	char filename[20];
+	int putere; // primul thread reduce va face 2 deci se va incepe cu puterea 2
+	//int l[20][20];
+	int ready;
+};
+
+void *f_reduce(void *arg)
+{
+	sem_wait(&semaphore2);
+	//cout << "AICI SE SCapA PE EL DE PROST???" << endl;// nu e de aici, nu merge bn semaforul
+	struct th *t = (struct th*) arg;
+	
+	t[0].putere++;
+	int putere = t[0].putere;
+	//cout << "PUTEREA MORTAL LISA ESTE : " << putere << endl;
+	sem_post(&semaphore2);
+	// NU CONTEAZA ORDINEA DC EU DOAR TREBUIE SA LE NUMAR => unorderd set pt eficenta
+	set<long long int> list_reduce;
+	
+	//pthread_mutex_lock(&mutex3);
+	//puts("_____________________________________________");
+	//cout << "putere = " << putere << endl;
+	for (int id = 0; id < t[0].map_threads; id++){
+		for (int i : t[id].l.at(putere-2)) {
+			list_reduce.insert(i);
+		}
+		
+	}
+	int nr = 0;
+	//puts("++++++++++++++++++++++++");
+	for(auto& str : list_reduce)
+	{
+		nr++;
+		//cout << str << ' ';
+	}
+	//cout << endl;
+	//cout << t[0].l.at(2).at(0) << endl;
+	FILE* fp3;
+	
+	
+	char filename[] = "out";
+	char p[5];
+	sprintf(p, "%d", putere);
+
+	strcat(filename, p);
+	strcat(filename, ".txt");
+	//cout << s <<  "f" << endl;
+
+	fp3 = fopen(filename, "w");
+	fprintf(fp3, "%d", nr);
+	fclose(fp3);
+
+
+
+	//puts("_____________________________________________");
+	//pthread_mutex_unlock(&mutex3);
+	
+	
+	//cout << "In f_reduce, id-ul pt thread-ul 3: "<< t[3].id << endl;
+	
+
+	pthread_exit(NULL);
+}
+
+void *f_map(void *arg) {
+
+	//sem_wait(&semaphore2);
+    struct th *t = (struct th*) arg;
+	//if (t->id < t->map_threads) {
+	FILE* fp2;
+	int r;
+	long long int nr;
+
+	fp2 = fopen(t->filename, "r");
+	//pthread_mutex_lock(&mutex3);
+	//cout <<"ID_UL ESTE : [" << t->id << "]" << endl;
+	//cout << t->filename << endl;
+	//cout << "S_A ZIS FILE" << endl;
+	//pthread_mutex_unlock(&mutex3);
+	
+	if(fp2 == NULL)
+	{
+		printf("Error!");   
+		exit(1);             
+	}
+	fscanf(fp2, "%d", &r);
+	long long int laput;
+
+	//printf(" r =  %d: ", r);
+	//PRELUCREZ VALORILE DIN FISERE
+	int kol = 5000;
+	int base;
+	int res;
+	//set<int> set1 = {};
+	//cout << "AJUnG++++++++++++ si r este: " << r << endl;
+	for (int k = 0; k < r; k++){
+		fscanf(fp2, "%lld", &nr);
+		//printf(" %d", nr);
+		// for (int i = 2; i < nr/2; i++){
+		// 	for (int p = 2; p <= t->reduce_threads + 1; p++){
+		// 		if (pow(i,k) == nr) {
+		// 			t->l[k-2] = nr;
+		// 		}
+		// 	}
+		// }
+		//dc e 1 il adaug in fiecare lista
+		if (k == kol){
+			//cout << "k este: " << k << "si r este : " << r << endl;
+			kol += 5000;
+		}
+
+		//cout << "k este: " << k << "si r este : " << r << endl;
+		if (nr == 1){
+			for (int p = 2; p <= t->reduce_threads + 1; p++){
+				t->l[p-2].push_back(nr);
+			}
+		}
+		else
+		{
+		
+			for (int p = 2; p <= t->reduce_threads + 1; p++){
+				for (long long int i = 2; i <= nr/2; i++){
+					// if (pow(i,p) == nr){
+					// 	t->l[p-2].push_back(nr);
+					// 	break; //trec la puterea urmat
+					// }
+					// else if(pow(i,p) > nr){
+					// 	break;
+					// }
+					res = 1;
+					laput = 1;
+					for (int j = 0; j < p; j++) {
+						laput = laput * i;
+						
+					}
+					
+					if (laput == nr) {
+						t->l[p-2].push_back(nr);
+						// if (p == 5){
+						// 	//cout << "I este :" << i << "si nr este :"<< nr << "si laput :" << laput << " si puterea :" << p << endl;
+						// 	set1.insert(nr);
+						// }
+						//i = nr;
+						break;
+					}
+					else if (laput > nr){
+						//i = nr;
+						break;
+					}
+
+				}
+			}
+		}
+	}
+	// cout << "PT puterea lui 5:" << endl;
+	// for(auto& str : set1)
+	// {
+	// 	//nr++;
+	// 	cout << str << endl;
+	// }
+	// cout << "over" << endl;
+	// puts("");
+	fclose(fp2);
+
+    //printf("id = %d, map_threads = %d, reduce_threads = %d\n", t->id, t->map_threads, t->reduce_threads);
+
+	
+	//sem_wait(&semaphore2);
+	//sem_post(&semaphore);
+	//sem_wait(&semaphore2);
+	//-----------------------------------------
+	//as putea incepe de aici de prelucrat noul fisier???
+	//} //end of map threads
+	// else {
+	// 	// problema e cand folosesc sem_post !!!!!!!!!!!!
+	// 	sem_wait(&semaphore2);
+	// 	puts("In f_reduce++++++++++++++++++++++");
+	// }
+	pthread_mutex_lock(&mutex2);
+	pass++;
+	if (pass == t->N) { //pass trebuie sa fie N 
+		sem_post(&semaphore2);
+		//puts("S_A DAT DRUMUL PE EL00000000000000000000000000000000000000000000");
+	}
+	pthread_mutex_unlock(&mutex2);
+
+	// pthread_mutex_lock(&mutex1);
+	// id_th = t->id;
+	
+	// ok = 1;//vector de threaduri libere???
+	// cout << "A TERMINAT ID [" << id_th << t->id << "]" << endl;
+	// for (int i = 0; i < 1000000; i++){ //WAIT ECHIVALENT :))
+
+	// }
+
+	// ok = 0;
+	// pthread_mutex_unlock(&mutex1);
+	t->ready = 1;
+	pthread_exit(NULL);
+    
+}
+
+
+int main(int argc, char **argv)
+{
+	//de facut static pt testare fara argumente
+	int map_threads = atoi(argv[1]);
+	//int map_threads = 7; //de comentaty !!!!!!!!!!!!!!!!
+	int reduce_threads = atoi(argv[2]);
+	//int reduce_threads = 5;
+	int cores = map_threads + reduce_threads;
+	int ids[cores];
+	int N, i, r, nr;
+	char s[20];
+	int a = 1, a2 = -100;
+	int stop = 0;
+	int barrier_no= 10;
+	FILE *fp;
+	pthread_t threads[cores];
+	sem_init(&semaphore, 0, 0);
+	sem_init(&semaphore2, 0, 0);
+	sem_init(&semaphore3, 0, 0);
+
+	r = pthread_mutex_init(&mutex1, NULL);
+	if (r != 0) {
+		printf("ERR");
+		exit(0);
+	}
+
+	r = pthread_mutex_init(&mutex2, NULL);
+	if (r != 0) {
+		printf("ERR");
+		exit(0);
+	}
+
+	r = pthread_mutex_init(&mutex3, NULL);
+	if (r != 0) {
+		printf("ERR");
+		exit(0);
+	}
+	
+	
+
+	r = pthread_barrier_init(&barrier, NULL, barrier_no);
+	if (r != 0) {
+		printf("ERR");
+		exit(0);
+	}
+
+	//printf("map_threads = %d, reduce_threads = %d\n", map_threads, reduce_threads);
+
+	fp = fopen(argv[3], "r");
+	//fp = fopen("test.txt", "r");
+
+	if(fp == NULL)
+	{
+		printf("Error!");   
+		exit(1);             
+	}
+
+	fscanf(fp, "%d", &N);
+	//printf("N = %d\n", N);
+	
+
+	//cout << "-----------\n";
+	r = 0;
+
+
+	struct th *t = (struct th*)malloc(sizeof(struct th)*cores);
+
+	int id;
+
+	
+	for (id = 0; id < map_threads; id++){ // fiecare a primit un fisier
+		fscanf(fp, "%s", s);  //citesc in s numele fisierului de pe fiecare linie
+		// printf("s = %s", s);
+		// puts("");
+
+		ids[id] = id;
+		t[id].id = id;
+		t[id].map_threads = map_threads;
+		t[id].reduce_threads = reduce_threads;
+		t[id].N = N;
+		t[id].putere = 1;
+		if (id < map_threads) {
+			t[id].l.resize(reduce_threads);
+			strcpy(t[id].filename, s);
+		}
+		t[id].ready = 0;
+		//cout << t[id].filename << endl;
+		//printf("id = %d, map_threads = %d, reduce_threads = %d\n", t[id].id, t[id].map_threads, t[id].reduce_threads);
+
+		r = pthread_create(&threads[id], NULL, f_map, &t[id]);
+
+		if (r) {
+			printf("Eroare la crearea thread-ului %d\n", id);
+			exit(-1);
+		}
+	}
+	
+	//asta treb sa inceapa cand termina un thread de tip map
+	for (int i = 0; i < N - map_threads; i++){ //problema fatala mortala depresiva luare nota mica
+		
+		fscanf(fp, "%s", s);
+		stop = 0;
+		
+
+		//cout << "????????????????????????????????????" << endl;
+		// while (a == 1){
+		// 	//puts("MATA");
+		// 	//cout << "OK ESTE :" << ok << "<___" << endl;
+		// 	if (ok == 1){
+		// 		//fscanf(fp, "%s", s);
+		// 		cout << "{{{{{{{{{{{{" << s << "}}}}}}}}" << endl;
+		// 		cout << "{{{" << id_th << "}}}" << endl;
+		// 		//cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+		// 		//cout << "ID_UL DE LA MASA ESTE: " << id_th << endl;
+		// 		//ok = 0;
+		// 		strcpy(t[id_th].filename, s); // nu se mai schimba id-ul
+		// 		r = pthread_create(&threads[id_th], NULL, f_map, &t[id_th]); //ruleaza in paralel
+		// 		if (r) {
+		// 			printf("Eroare la crearea thread-ului %d\n", id);
+		// 			exit(-1);
+		// 		}
+		// 		fscanf(fp, "%s", s);
+		// 		//cout << "=============================";
+		// 		a = 0;
+		// 	}
+			
+		// }
+		// a = 1;
+
+		while (1){
+			for (id = 0; id < map_threads; id++){
+				if (t[id].ready == 1){
+					stop = 1;
+					strcpy(t[id].filename, s);
+					t[id].ready = 0;
+					r = pthread_create(&threads[id], NULL, f_map, &t[id]); //ruleaza in paralel
+					if (r) {
+						printf("Eroare la crearea thread-ului %d\n", id);
+						exit(-1);
+					}
+					break;
+
+				}
+				
+				
+			}
+			if (stop == 1) {
+				break;
+			}
+			
+
+		}
+	}
+	//pthread_mutex_unlock(&mutex2);
+
+	//URMEAZA DE COMBINAT VALORILE IN LISTE COMUNE DE FIECARE PUTERE + AFIARE IN FISIERLE DE IESIRE CU REDUCE THREADS
+	//pthread_mutex_lock(&mutex2);
+	for (id = map_threads; id < cores; id++) {
+		ids[id] = id;
+		t[id].id = id;
+		t[id].map_threads = map_threads;
+		t[id].reduce_threads = reduce_threads;
+		//t[id].l.resize(reduce_threads);
+		
+		r = pthread_create(&threads[id], NULL, f_reduce, t);
+
+		if (r) {
+			printf("Eroare la crearea thread-ului %d\n", id);
+			exit(-1);
+		}
+
+	}
+	//pthread_mutex_unlock(&mutex2);
+	//pthread_barrier_wait(&barrier); 
+	//TREBUIE sa fac wait.ul in fctia f!!!!!!!!!!!! doar acolo are efect deci am nev de semaphor pt map threads pe care il folosesc in thread.urile reduce 
+	//pt a sti dc sa continui rularea lor sau nu cu swm_wait() 
+	//cout << "A este: " <<a2 << endl;
+	//sem_wait(&semaphore2);
+	//puts("LISTELE FORMATE");
+	// int kol = 2;
+	// for (id = 0; id < map_threads; id++){
+	// 	kol = 2;
+	// 	for (const auto&i : t[id].l){
+	// 		cout << kol++ <<": ";
+	// 		for (int k : i){
+	// 			cout << k << ' ';
+	// 		}
+	// 		cout << endl;
+	// 	}
+	// 	cout << endl;
+	// }
+
+
+	for (i = 0; i < cores; i++) { // folosesc doar mpa_threads inca, dar la final o sa le folosesc pe ambele adica si reduce si o sa ma cores
+		r = pthread_join(threads[i], NULL);
+
+		if (r) {
+			printf("Eroare la asteptarea thread-ului %d\n", i);
+			exit(-1);
+		}
+	}
+	
+
+	fclose(fp);
+	pthread_mutex_destroy(&mutex1);
+	pthread_mutex_destroy(&mutex2);
+	pthread_mutex_destroy(&mutex3);
+	sem_destroy(&semaphore);
+	sem_destroy(&semaphore2);
+	sem_destroy(&semaphore3);
+
+	pthread_barrier_destroy(&barrier);
+	
+	/* code */
+	return 0;
+}
